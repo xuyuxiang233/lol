@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>极简LOL</title>
+		<style>
+			*{
+				margin:0;
+				padding:0;
+				font-family:Microsoft Yahei;
+				line-height:1;
+				box-sizing:border-box;
+			}
+			.game{
+				position:fixed;
+				top:50%;
+				left:50%;
+				width:1000px;
+				text-align:center;
+				font-size:100px;
+				font-weight:bold;
+				line-height:260px;
+				color:red;
+				transform:translate(-50%, -50%);
+			}
+			.role{
+				position:absolute;
+				top:0px;
+				padding-top:60px;
+				width:200px;
+				height:260px;
+				background-position:0 50px;
+				background-repeat:no-repeat;
+				border:1px solid rgb(201, 201, 201);
+			}
+			.role:hover{
+				border-color:orange;
+			}
+			.role h1{
+				position:absolute;
+				top:10px;
+				width:100%;
+				text-align:center;
+				font-size:16px;
+			}
+			.role .bloodMeter{
+				position:absolute;
+				top:30px;
+				left:0;
+				width:100%;
+				height:12px;
+				border:1px solid rgb(201, 201, 201);
+			}
+			.role .bloodMeter div{
+				width:100%;
+				height:100%;
+				background-color:rgb(96, 192, 96);
+			}
+			.role .showBlood{
+				position:absolute;
+				top:50px;
+				left:50%;
+				font-size:20px;
+				font-weight:bold;
+				color:red;
+				opacity:0;
+				transform:translateX(-50%);
+			}
+			.role .showBlood.run{
+				opacity:1;
+				animation:run 1s forwards;
+			}
+			.role a{
+				float:left;
+				margin:175px 0 0 10px;
+				font-size:16px;
+				font-weight:bold;
+				line-height:24px;
+				cursor:pointer;
+			}
+			.role a.current{
+				font-weight:bold;
+				font-size:20px;
+				color:black;
+			}
+			.role a:hover{
+				color:red;
+			}
+			.darius{
+				left:0;
+				background-image:url(./darius.png);
+				color:blue;
+			}
+			.garen{
+				right:0;
+				background-image:url(./garen.png);
+				color:red;
+			}
+			@keyframes run{
+				to{
+					top:20px;
+					opacity:0;
+				}
+			}
+			::selection{
+				background-color:transparent;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="game">Solo</div>
+		<script>
+			var Game = (function Game(){
+				var game = document.querySelector(".game");
+				var RoleSet = {
+					info : {
+						Garen : {
+							name : "盖伦",
+							english : "garen",
+							description : "德玛西亚之力"
+						},
+						Darius : {
+							name : "德莱厄斯",
+							english : "darius",
+							description : "诺克萨斯之手"
+						}
+					},
+					Role : function(option){
+						var name = option.name,
+							english = option.english,
+							description = option.description;
+						this.name = name;
+						this.english = english;
+						this.description = description;
+						this.blood = 100;
+						this.init = function(){
+							var dom = document.createElement("div");
+							dom.className = "role " + this.english;
+							var _this = this;
+							dom.onclick = function(){
+								var battlefield = Game.battlefield;
+								Game.readyBeHurt(_this);
+								battlefield.length >> 1 && battlefield[1].comeFrom.attack(battlefield[1].skill, battlefield[0]);
+							};
+							var name = document.createElement("h1");
+							name.appendChild(document.createTextNode(this.name));
+							var bloodMeter = document.createElement("div");
+							this.meter = document.createElement("div");
+							bloodMeter.className = "bloodMeter";
+							bloodMeter.appendChild(this.meter);
+							this.showBlood = document.createElement("div");
+							this.showBlood.className = "showBlood";
+							dom.appendChild(name);
+							dom.appendChild(bloodMeter);
+							dom.appendChild(this.showBlood);
+							this.addA(dom).addQ(dom).addW(dom).addE(dom).addR(dom);
+							return dom;
+						};
+						this.addBtn = function(dom, text){
+							var btn = document.createElement("a"),
+								_this = this;
+							btn.appendChild(document.createTextNode(text));
+							btn.onclick = function(e){
+								e.stopPropagation();
+								Game.readyHurt(_this, text);
+								Array.from(this.parentNode.childNodes).map(function(list){
+									list.classList.remove("current");
+								});
+								this.classList.add("current");
+							};
+							dom.appendChild(btn);
+						};
+						this.addA = function(dom){
+							this.addBtn(dom, "A");
+							return this;
+						};
+						this.addQ = function(dom){
+							this.addBtn(dom, "Q");
+							return this;
+						};
+						this.addW = function(dom){
+							this.addBtn(dom, "W");
+							return this;
+						};
+						this.addE = function(dom){
+							this.addBtn(dom, "E");
+							return this;
+						};
+						this.addR = function(dom){
+							this.addBtn(dom, "R");
+							return this;
+						};
+						this.A = function(){
+							return 10;
+						};
+						this.Q = function(){
+							return 30;
+						};
+						this.W = function(){
+							return 15;
+						};
+						this.E = function(){
+							return 20;
+						};
+						this.R = function(){
+							return 50;
+						};
+						this.attack = function(skill, towards){
+							towards.english !== this.english && towards.hurt(this[skill]());
+							Game.battlefield = [];
+						};
+						this.hurt = function(blood){
+							var _blood = this.blood,
+								_this = this;
+							this.blood = _blood - blood > 0 ? _blood - blood : 0;
+							this.showBlood.innerHTML = -blood;
+							this.showBlood.classList.add("run");
+							var t = setTimeout(function(){
+								clearTimeout(t);
+								_this.showBlood.classList.remove("run");
+							}, 1000);
+							this.meter.style.width = this.blood + "%";
+						};
+						this.display = function(){
+							game.appendChild(this.init());
+						};
+						this.display();
+					},
+					Darius : function(option){
+						RoleSet.Role.call(this, option);
+					},
+					Garen : function(option){
+						RoleSet.Role.call(this, option);
+					}
+				};
+				var Game = {
+					battlefield : [],
+					init : function(role){
+						var _role = [];
+						for(var i = 0, roleLen = role.length; i < roleLen; i++){
+							_role.push(new RoleSet[role[i]](RoleSet.info[role[i]]));
+						}
+						RoleSet.role = _role;
+					},
+					readyBeHurt : function(towards){
+						this.battlefield[0] = towards;
+					},
+					readyHurt : function(comeFrom, skill){
+						this.battlefield[1] = {
+							comeFrom : comeFrom,
+							skill : skill
+						};
+					}
+				};
+				return Game;
+			})();
+			Game.init(["Darius", "Garen"]);
+		</script>
+	</body>
+</html>
